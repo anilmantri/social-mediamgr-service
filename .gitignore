@@ -1,0 +1,8 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Optional: IntelliJ generated files
+out/
+.env
+.env.example
