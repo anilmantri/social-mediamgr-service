@@ -292,7 +292,9 @@ class GroqContentClient:
             response_format={"type": "json_object"},
         )
 
-        raw = response.choices[0].message.content or ""
+        raw = (response.choices[0].message.content or "").strip()
+        if not raw:
+            raise ValueError("Groq returned empty response for calendar plan")
         # Calendar prompt returns array wrapped in object
         try:
             parsed = json.loads(raw)

@@ -131,8 +131,10 @@ class BillingService:
         # Create default workspace for new user
         workspace = Workspace(
             name="My Brand",
-            slug=f"workspace-{str(user_id)[:8]}",
+            slug=f"ws-{str(user_id).replace('-', '')[:12]}",
+            owner_id=user_id,
             is_active=True,
+            settings={},
         )
         self._db.add(workspace)
         await self._db.flush()
@@ -358,10 +360,6 @@ class BillingService:
         customer_id = sub.stripe_customer_id if sub else None
 
         if not customer_id:
-            user_result = await self._db.execute(
-                select("users").where(1 == 1)  # simplified
-            )
-            # Create customer in Stripe
             from app.models.auth import User
             user_q = await self._db.execute(select(User).where(User.id == user_id))
             user = user_q.scalar_one()

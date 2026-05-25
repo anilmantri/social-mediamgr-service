@@ -121,7 +121,9 @@ class AuthService:
 
     # ── Google OAuth ──────────────────────────────────────────────────────────
 
-    def get_google_auth_url(self, state: str | None = None) -> str:
+    @staticmethod
+    def build_google_auth_url(state: str | None = None) -> str:
+        from urllib.parse import urlencode
         params = {
             "client_id": settings.GOOGLE_CLIENT_ID,
             "redirect_uri": settings.GOOGLE_REDIRECT_URI,
@@ -132,7 +134,6 @@ class AuthService:
         }
         if state:
             params["state"] = state
-        from urllib.parse import urlencode
         return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
     async def google_callback(self, code: str) -> TokenResponse:
@@ -146,7 +147,10 @@ class AuthService:
                 "grant_type": "authorization_code",
             })
             token_resp.raise_for_status()
-            tokens = token_resp.json()
+            try:
+                tokens = token_resp.json()
+            except Exception:
+                raise ValueError(f"Invalid response from Google token endpoint: {token_resp.text[:200]}")
 
             # Get user info
             user_resp = await client.get(
@@ -154,7 +158,10 @@ class AuthService:
                 headers={"Authorization": f"Bearer {tokens['access_token']}"},
             )
             user_resp.raise_for_status()
-            info = user_resp.json()
+            try:
+                info = user_resp.json()
+            except Exception:
+                raise ValueError(f"Invalid response from Google userinfo endpoint: {user_resp.text[:200]}")
 
         email      = info["email"].lower()
         google_id  = info["sub"]

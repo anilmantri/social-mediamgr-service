@@ -68,15 +68,26 @@ DB = Annotated[AsyncSession, Depends(get_db)]
     status_code=status.HTTP_202_ACCEPTED,
     summary="Initiate AI content generation",
     description=(
-        "Queues an async job to generate caption and optionally an image. "
-        "Returns immediately with a job_id. Poll /jobs/{job_id} for completion."
+            "Queues an async job to generate caption and optionally an image. "
+            "Returns immediately with a job_id. Poll /jobs/{job_id} for completion."
     ),
 )
 async def generate_content(
-    request: ContentGenerationRequest,
-    db: DB,
-    current_user: CurrentUser,
+        db: DB,
+        current_user: CurrentUser,
+        request: ContentGenerationRequest,
 ) -> ContentGenerationResponse:
+    # Credit gate — check balance before queuing AI job
+    action = (
+        CreditActionType.CONTENT_GENERATE if request.include_image
+        else CreditActionType.CAPTION_GENERATE
+    )
+    billing = BillingService(db=db)
+    await billing.assert_can_generate(
+        user_id=current_user,
+        workspace_id=request.workspace_id,
+        action_type=action,
+    )
     service = ContentGenerationService(db=db)
     try:
         return await service.initiate_generation(
@@ -98,12 +109,13 @@ async def generate_content(
     summary="List draft content",
 )
 async def list_content(
-    db: DB,
-    current_user: CurrentUser,
-    workspace_id: uuid.UUID = Query(...),
-    content_status: ContentStatus | None = Query(None, alias="status"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+        db: DB,
+        current_user: CurrentUser,
+        workspace_id: uuid.UUID = Query(...,
+                                        ),
+        content_status: ContentStatus | None = Query(None, alias="status"),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=100),
 ) -> DraftContentList:
     service = ApprovalService(db=db)
     drafts, total = await service.list_drafts(
@@ -143,9 +155,9 @@ async def list_content(
     summary="Get draft content detail with all versions",
 )
 async def get_content(
-    draft_id: uuid.UUID,
-    db: DB,
-    current_user: CurrentUser,
+        db: DB,
+        current_user: CurrentUser,
+        draft_id: uuid.UUID,
 ) -> DraftContentRead:
     service = ApprovalService(db=db)
     try:
@@ -174,10 +186,10 @@ async def get_content(
     summary="Submit draft for review",
 )
 async def submit_for_review(
-    draft_id: uuid.UUID,
-    db: DB,
-    current_user: CurrentUser,
-    body: ApproveRequest = Body(default=ApproveRequest()),
+        db: DB,
+        current_user: CurrentUser,
+        draft_id: uuid.UUID,
+        body: ApproveRequest = Body(default=ApproveRequest()),
 ) -> ApprovalActionResponse:
     service = ApprovalService(db=db)
     try:
@@ -194,10 +206,10 @@ async def submit_for_review(
     summary="Approve content for scheduling",
 )
 async def approve_content(
-    draft_id: uuid.UUID,
-    db: DB,
-    current_user: CurrentUser,
-    body: ApproveRequest = Body(default=ApproveRequest()),
+        db: DB,
+        current_user: CurrentUser,
+        draft_id: uuid.UUID,
+        body: ApproveRequest = Body(default=ApproveRequest()),
 ) -> ApprovalActionResponse:
     service = ApprovalService(db=db)
     try:
@@ -214,10 +226,10 @@ async def approve_content(
     summary="Reject content with reason",
 )
 async def reject_content(
-    draft_id: uuid.UUID,
-    body: RejectRequest,
-    db: DB,
-    current_user: CurrentUser,
+        db: DB,
+        current_user: CurrentUser,
+        draft_id: uuid.UUID,
+        body: RejectRequest,
 ) -> ApprovalActionResponse:
     service = ApprovalService(db=db)
     try:
@@ -237,10 +249,10 @@ async def reject_content(
     summary="Edit content — creates new version, returns to pending",
 )
 async def edit_content(
-    draft_id: uuid.UUID,
-    body: EditRequest,
-    db: DB,
-    current_user: CurrentUser,
+        db: DB,
+        current_user: CurrentUser,
+        draft_id: uuid.UUID,
+        body: EditRequest,
 ) -> ApprovalActionResponse:
     service = ApprovalService(db=db)
     try:
@@ -258,10 +270,10 @@ async def edit_content(
     summary="Regenerate caption and/or image",
 )
 async def regenerate_content(
-    draft_id: uuid.UUID,
-    body: RegenerateRequest,
-    db: DB,
-    current_user: CurrentUser,
+        db: DB,
+        current_user: CurrentUser,
+        draft_id: uuid.UUID,
+        body: RegenerateRequest,
 ) -> dict:
     service = ApprovalService(db=db)
     try:
@@ -278,10 +290,11 @@ async def regenerate_content(
     summary="Add a comment to a draft",
 )
 async def add_comment(
-    draft_id: uuid.UUID,
-    db: DB,
-    current_user: CurrentUser,
-    comment: Annotated[str, Body(embed=True, min_length=1, max_length=1000)],
+        db: DB,
+        current_user: CurrentUser,
+        draft_id: uuid.UUID,
+        comment: Annotated[str, Body(embed=True, min_length=1, max_length=1000,
+                                     )],
 ) -> ApprovalActionResponse:
     service = ApprovalService(db=db)
     try:
@@ -302,9 +315,9 @@ async def add_comment(
     description="Queues batch generation of an entire month's content plan.",
 )
 async def plan_calendar(
-    request: CalendarPlanRequest,
-    db: DB,
-    current_user: CurrentUser,
+        db: DB,
+        current_user: CurrentUser,
+        request: CalendarPlanRequest,
 ) -> CalendarPlanResponse:
     service = ContentGenerationService(db=db)
     try:
@@ -324,9 +337,9 @@ async def plan_calendar(
     summary="Poll generation job status",
 )
 async def get_job_status(
-    job_id: uuid.UUID,
-    db: DB,
-    current_user: CurrentUser,
+        db: DB,
+        current_user: CurrentUser,
+        job_id: uuid.UUID,
 ) -> JobStatusResponse:
     from sqlalchemy import select
     result = await db.execute(
@@ -363,10 +376,10 @@ async def get_job_status(
     summary="Create or update brand voice profile",
 )
 async def upsert_brand_profile(
-    workspace_id: uuid.UUID,
-    body: BrandProfileUpsert,
-    db: DB,
-    current_user: CurrentUser,
+        db: DB,
+        current_user: CurrentUser,
+        workspace_id: uuid.UUID,
+        body: BrandProfileUpsert,
 ) -> dict:
     service = BrandVoiceService(db=db)
     profile = await service.upsert_profile(str(workspace_id), body)
@@ -384,10 +397,10 @@ class BrandVoiceScoreRequest(BaseModel):
     summary="Score content against brand voice",
 )
 async def score_brand_voice(
-    workspace_id: uuid.UUID,
-    body: BrandVoiceScoreRequest,
-    db: DB,
-    current_user: CurrentUser,
+        db: DB,
+        current_user: CurrentUser,
+        workspace_id: uuid.UUID,
+        body: BrandVoiceScoreRequest,
 ) -> BrandVoiceScoreResponse:
     service = BrandVoiceService(db=db)
     return await service.score_content(

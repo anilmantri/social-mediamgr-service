@@ -31,11 +31,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth_deps import get_current_user_id as _real_get_current_user_id
-from app.services.billing import BillingService
 from app.core.config import settings
-
-CurrentUser = Annotated[uuid.UUID, Depends(_real_get_current_user_id)]
-DB = Annotated[AsyncSession, Depends(get_db)]
 from app.db.session import get_db
 from app.models.scheduler import (
     EvergreenCandidate,
@@ -65,6 +61,9 @@ from app.services.scheduler import SchedulerService
 
 log = structlog.get_logger(__name__)
 
+CurrentUser = Annotated[uuid.UUID, Depends(_real_get_current_user_id)]
+DB = Annotated[AsyncSession, Depends(get_db)]
+
 router = APIRouter(prefix="/api/v1", tags=["Calendar & Scheduler"])
 
 
@@ -74,7 +73,9 @@ router = APIRouter(prefix="/api/v1", tags=["Calendar & Scheduler"])
     "/instagram/auth-url",
     summary="Get Instagram OAuth redirect URL",
 )
-async def get_auth_url(workspace_id: uuid.UUID = Query(...)) -> dict:
+async def get_auth_url(
+    workspace_id: uuid.UUID = Query(...,
+)) -> dict:
     """Returns the URL to redirect the user to for Instagram authorisation."""
     url = (
         f"https://www.facebook.com/dialog/oauth"
@@ -184,9 +185,9 @@ async def instagram_callback(
     summary="Get connected Instagram account",
 )
 async def get_instagram_account(
-    workspace_id: uuid.UUID,
     db: DB,
     current_user: CurrentUser,
+    workspace_id: uuid.UUID,
 ) -> InstagramAccountRead:
     result = await db.execute(
         select(InstagramAccount).where(
@@ -206,9 +207,9 @@ async def get_instagram_account(
     summary="Disconnect Instagram account",
 )
 async def disconnect_instagram_account(
-    workspace_id: uuid.UUID,
     db: DB,
     current_user: CurrentUser,
+    workspace_id: uuid.UUID,
 ) -> None:
     result = await db.execute(
         select(InstagramAccount).where(
@@ -229,9 +230,9 @@ async def disconnect_instagram_account(
     summary="Schedule an approved post",
 )
 async def schedule_post(
-    body: SchedulePostRequest,
     db: DB,
     current_user: CurrentUser,
+    body: SchedulePostRequest,
 ) -> ScheduledPostRead:
     svc = SchedulerService(db=db)
     try:
@@ -253,10 +254,11 @@ async def schedule_post(
     summary="Unschedule a post",
 )
 async def unschedule_post(
-    scheduled_post_id: uuid.UUID,
     db: DB,
     current_user: CurrentUser,
-    workspace_id: uuid.UUID = Query(...),
+    scheduled_post_id: uuid.UUID,
+    workspace_id: uuid.UUID = Query(...,
+),
 ) -> None:
     svc = SchedulerService(db=db)
     try:
@@ -271,11 +273,12 @@ async def unschedule_post(
     summary="Move a post to a new time",
 )
 async def reschedule_post(
-    scheduled_post_id: uuid.UUID,
-    body: RescheduleRequest,
     db: DB,
     current_user: CurrentUser,
-    workspace_id: uuid.UUID = Query(...),
+    scheduled_post_id: uuid.UUID,
+    body: RescheduleRequest,
+    workspace_id: uuid.UUID = Query(...,
+),
 ) -> ScheduledPostRead:
     svc = SchedulerService(db=db)
     try:
@@ -293,7 +296,8 @@ async def reschedule_post(
 async def list_scheduled_posts(
     db: DB,
     current_user: CurrentUser,
-    workspace_id: uuid.UUID = Query(...),
+    workspace_id: uuid.UUID = Query(...,
+),
     publish_status: PublishStatus | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -320,9 +324,9 @@ async def list_scheduled_posts(
     summary="Get scheduled post detail",
 )
 async def get_scheduled_post(
-    scheduled_post_id: uuid.UUID,
     db: DB,
     current_user: CurrentUser,
+    scheduled_post_id: uuid.UUID,
 ) -> ScheduledPostRead:
     result = await db.execute(
         select(ScheduledPost).where(ScheduledPost.id == scheduled_post_id)
@@ -339,9 +343,9 @@ async def get_scheduled_post(
     summary="Get post performance metrics",
 )
 async def get_post_metrics(
-    scheduled_post_id: uuid.UUID,
     db: DB,
     current_user: CurrentUser,
+    scheduled_post_id: uuid.UUID,
 ) -> PostMetricsRead:
     result = await db.execute(
         select(PostMetrics).where(
@@ -363,9 +367,9 @@ async def get_post_metrics(
     summary="Get publish attempt logs",
 )
 async def get_publish_logs(
-    scheduled_post_id: uuid.UUID,
     db: DB,
     current_user: CurrentUser,
+    scheduled_post_id: uuid.UUID,
 ) -> list[PublishLogRead]:
     result = await db.execute(
         select(PostPublishLog)
@@ -384,11 +388,11 @@ async def get_publish_logs(
     summary="Get full month calendar view",
 )
 async def get_calendar_month(
+    db: DB,
+    current_user: CurrentUser,
     workspace_id: uuid.UUID,
     year: int,
     month: int,
-    db: DB,
-    current_user: CurrentUser,
 ) -> CalendarMonthRead:
     if not (1 <= month <= 12):
         raise HTTPException(status_code=400, detail="month must be 1-12")
@@ -406,9 +410,9 @@ async def get_calendar_month(
     summary="Get best posting time suggestions",
 )
 async def get_optimal_time(
-    workspace_id: uuid.UUID,
     db: DB,
     current_user: CurrentUser,
+    workspace_id: uuid.UUID,
 ) -> OptimalTimeSuggestion:
     svc = OptimalTimeService(db=db)
     return await svc.get_suggestion(workspace_id)
@@ -419,9 +423,9 @@ async def get_optimal_time(
     summary="Force recompute optimal time slots from existing metrics",
 )
 async def recompute_optimal_time(
-    workspace_id: uuid.UUID,
     db: DB,
     current_user: CurrentUser,
+    workspace_id: uuid.UUID,
 ) -> dict:
     svc = OptimalTimeService(db=db)
     updated = await svc.compute_optimal_slots(workspace_id)
@@ -436,9 +440,9 @@ async def recompute_optimal_time(
     summary="List evergreen candidates (top performing posts for recycling)",
 )
 async def list_evergreen(
-    workspace_id: uuid.UUID,
     db: DB,
     current_user: CurrentUser,
+    workspace_id: uuid.UUID,
 ) -> list[EvergreenCandidateRead]:
     result = await db.execute(
         select(EvergreenCandidate)
@@ -459,10 +463,11 @@ async def list_evergreen(
     summary="Recycle an evergreen post — schedule a refreshed copy",
 )
 async def recycle_post(
-    body: RecycleRequest,
     db: DB,
     current_user: CurrentUser,
-    workspace_id: uuid.UUID = Query(...),
+    body: RecycleRequest,
+    workspace_id: uuid.UUID = Query(...,
+),
 ) -> ScheduledPostRead:
     """
     Re-schedules an evergreen post's original content at the new time.

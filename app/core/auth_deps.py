@@ -41,7 +41,7 @@ class AuthenticatedUser:
 
 async def get_current_auth(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AuthenticatedUser:
     """Full auth dependency — validates JWT, loads user + subscription."""
     token_payload = decode_token(credentials.credentials)

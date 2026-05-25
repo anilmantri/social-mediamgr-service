@@ -55,13 +55,16 @@ async def lifespan(app: FastAPI):
             traces_sample_rate=0.1 if settings.is_production else 1.0,
         )
 
-    # Seed plan definitions
+    # Seed plan definitions (skip gracefully if tables not migrated yet)
     from app.db.session import AsyncSessionFactory
     from app.services.billing import BillingService
-    async with AsyncSessionFactory() as db:
-        billing = BillingService(db=db)
-        await billing.seed_plans()
-        await db.commit()
+    try:
+        async with AsyncSessionFactory() as db:
+            billing = BillingService(db=db)
+            await billing.seed_plans()
+            await db.commit()
+    except Exception as _seed_err:
+        log.warning("plan_seed_skipped", reason=str(_seed_err))
 
     db_ok = await check_db_connection()
     log.info(
@@ -92,7 +95,7 @@ def create_app() -> FastAPI:
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(o) for o in settings.ALLOWED_ORIGINS],
+        allow_origins=settings.allowed_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

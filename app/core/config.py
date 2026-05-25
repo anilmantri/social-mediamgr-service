@@ -1,6 +1,6 @@
 from functools import lru_cache
 from typing import Literal
-from pydantic import AnyHttpUrl, Field, PostgresDsn, RedisDsn, field_validator
+from pydantic import Field, PostgresDsn, RedisDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     DEBUG: bool = False
     SECRET_KEY: str = Field(..., min_length=32)
-    ALLOWED_ORIGINS: list[AnyHttpUrl] = []
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
 
     # ── Database ───────────────────────────────────────────────────────────────
     DATABASE_URL: PostgresDsn = Field(
@@ -118,12 +118,14 @@ class Settings(BaseSettings):
     # ── Frontend ──────────────────────────────────────────────────────────────
     FRONTEND_URL: str = Field(default="http://localhost:3000")
 
-    @field_validator("ALLOWED_ORIGINS", mode="before")
-    @classmethod
-    def parse_origins(cls, v: str | list) -> list:
-        if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
-        return v
+
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        """Returns ALLOWED_ORIGINS as a list, split on comma."""
+        if not self.ALLOWED_ORIGINS:
+            return ["http://localhost:3000", "http://localhost:5173"]
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
     @property
     def is_production(self) -> bool:

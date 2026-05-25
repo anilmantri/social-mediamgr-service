@@ -93,10 +93,11 @@ class Workspace(Base):
 
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     slug: Mapped[str] = mapped_column(String(80), nullable=False, unique=True, index=True)
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
     instagram_account_id: Mapped[str | None] = mapped_column(String(64), unique=True)
     instagram_username: Mapped[str | None] = mapped_column(String(64))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    settings: Mapped[dict] = mapped_column(JSONB, default=dict)  # timezone, default_tone, etc.
+    settings: Mapped[dict] = mapped_column(JSONB, default=dict, server_default="{}")  # timezone, default_tone, etc.
 
     # Relationships
     members: Mapped[list["WorkspaceMember"]] = relationship(back_populates="workspace")

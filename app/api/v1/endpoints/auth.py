@@ -56,44 +56,53 @@ DB = Annotated[AsyncSession, Depends(get_db)]
 
 @router.post("/auth/signup", response_model=TokenResponse, status_code=201,
     summary="Sign up with email and password")
-async def signup(body: SignupRequest, db: DB) -> TokenResponse:
+async def signup(
+    body: SignupRequest, db: DB,
+) -> TokenResponse:
     svc = AuthService(db=db)
     return await svc.signup(body)
 
 
 @router.post("/auth/login", response_model=TokenResponse,
     summary="Login with email and password")
-async def login(body: LoginRequest, request: Request, db: DB) -> TokenResponse:
+async def login(
+    body: LoginRequest, request: Request, db: DB,
+) -> TokenResponse:
     svc = AuthService(db=db)
     return await svc.login(body, device_info=request.headers.get("user-agent", "")[:200])
 
 
 @router.post("/auth/logout", status_code=204, summary="Logout and revoke refresh token")
-async def logout(body: RefreshRequest, db: DB) -> None:
+async def logout(
+    body: RefreshRequest, db: DB,
+) -> None:
     svc = AuthService(db=db)
     await svc.logout(body.refresh_token)
 
 
 @router.post("/auth/refresh", response_model=TokenResponse, summary="Refresh access token")
-async def refresh(body: RefreshRequest, db: DB) -> TokenResponse:
+async def refresh(
+    body: RefreshRequest, db: DB,
+) -> TokenResponse:
     svc = AuthService(db=db)
     return await svc.refresh_tokens(body.refresh_token)
 
 
 @router.get("/auth/google", summary="Get Google OAuth redirect URL")
 async def google_auth_url(
-    redirect_to: str = Query(default="/dashboard"),
+    redirect_to: str = Query(default="/dashboard",
+),
 ) -> dict:
-    svc = AuthService(db=None)  # type: ignore
-    url = svc.get_google_auth_url(state=redirect_to)
+    url = AuthService.build_google_auth_url(state=redirect_to)
     return {"auth_url": url}
 
 
 @router.get("/auth/google/callback", include_in_schema=False)
 async def google_callback(
-    code: str = Query(...),
+    db: DB,
+    code: str = Query(...,
+),
     state: str = Query(default="/dashboard"),
-    db: DB = Depends(get_db),
 ) -> RedirectResponse:
     svc = AuthService(db=db)
     try:
@@ -114,7 +123,9 @@ async def google_callback(
 
 
 @router.post("/auth/verify-email", summary="Verify email address")
-async def verify_email(body: VerifyEmailRequest, db: DB) -> dict:
+async def verify_email(
+    body: VerifyEmailRequest, db: DB,
+) -> dict:
     svc = AuthService(db=db)
     ok = await svc.verify_email(body.token)
     if not ok:
@@ -123,14 +134,18 @@ async def verify_email(body: VerifyEmailRequest, db: DB) -> dict:
 
 
 @router.post("/auth/forgot-password", status_code=202, summary="Send password reset email")
-async def forgot_password(body: ForgotPasswordRequest, db: DB) -> dict:
+async def forgot_password(
+    body: ForgotPasswordRequest, db: DB,
+) -> dict:
     svc = AuthService(db=db)
     await svc.forgot_password(body.email)
     return {"message": "If that email exists, a reset link has been sent"}
 
 
 @router.post("/auth/reset-password", summary="Reset password with token")
-async def reset_password(body: ResetPasswordRequest, db: DB) -> dict:
+async def reset_password(
+    body: ResetPasswordRequest, db: DB,
+) -> dict:
     svc = AuthService(db=db)
     ok = await svc.reset_password(body.token, body.new_password)
     if not ok:
@@ -139,15 +154,17 @@ async def reset_password(body: ResetPasswordRequest, db: DB) -> dict:
 
 
 @router.get("/auth/me", response_model=UserRead, summary="Get current user profile")
-async def get_me(auth: CurrentAuth) -> UserRead:
+async def get_me(
+    auth: CurrentAuth,
+) -> UserRead:
     return UserRead.model_validate(auth.user)
 
 
 @router.patch("/auth/me", response_model=UserRead, summary="Update profile")
 async def update_me(
-    body: UserUpdate,
     auth: CurrentAuth,
     db: DB,
+    body: UserUpdate,
 ) -> UserRead:
     user = auth.user
     if body.name is not None:
@@ -163,7 +180,9 @@ async def update_me(
 # ── Billing ────────────────────────────────────────────────────────────────────
 
 @router.get("/billing/plans", response_model=list[PlanRead], summary="List all plans")
-async def list_plans(db: DB) -> list[PlanRead]:
+async def list_plans(
+    db: DB,
+) -> list[PlanRead]:
     billing = BillingService(db=db)
     plans = await billing.get_all_plans()
     return [PlanRead.model_validate(p) for p in plans]
@@ -171,7 +190,9 @@ async def list_plans(db: DB) -> list[PlanRead]:
 
 @router.get("/billing/subscription", response_model=SubscriptionRead,
     summary="Get current subscription")
-async def get_subscription(auth: CurrentAuth, db: DB) -> SubscriptionRead:
+async def get_subscription(
+    auth: CurrentAuth, db: DB,
+) -> SubscriptionRead:
     billing = BillingService(db=db)
     sub = await billing._get_active_subscription(auth.user_id)
     if not sub:
@@ -182,9 +203,9 @@ async def get_subscription(auth: CurrentAuth, db: DB) -> SubscriptionRead:
 @router.get("/billing/usage/{workspace_id}", response_model=UsageSummary,
     summary="Get credit balance and usage for a workspace")
 async def get_usage(
-    workspace_id: uuid.UUID,
     auth: CurrentAuth,
     db: DB,
+    workspace_id: uuid.UUID,
 ) -> UsageSummary:
     billing = BillingService(db=db)
     return await billing.get_usage_summary(auth.user_id, workspace_id)
@@ -194,10 +215,11 @@ async def get_usage(
     response_model=list[CreditTransactionRead],
     summary="Credit transaction history")
 async def get_transactions(
-    workspace_id: uuid.UUID,
     auth: CurrentAuth,
     db: DB,
-    limit: int = Query(default=50, le=200),
+    workspace_id: uuid.UUID,
+    limit: int = Query(default=50, le=200,
+),
 ) -> list[CreditTransactionRead]:
     result = await db.execute(
         select(CreditTransaction)
@@ -212,9 +234,9 @@ async def get_transactions(
 @router.post("/billing/checkout", response_model=CheckoutResponse,
     summary="Create Stripe checkout session to upgrade plan")
 async def create_checkout(
-    body: CreateCheckoutRequest,
     auth: CurrentAuth,
     db: DB,
+    body: CreateCheckoutRequest,
 ) -> CheckoutResponse:
     billing = BillingService(db=db)
     return await billing.create_checkout_session(
@@ -227,9 +249,10 @@ async def create_checkout(
 
 @router.post("/billing/webhook", include_in_schema=False)
 async def stripe_webhook(
-    request: Request,
     db: DB,
-    stripe_signature: str = Header(alias="stripe-signature", default=""),
+    request: Request,
+    stripe_signature: str = Header(alias="stripe-signature", default="",
+),
 ) -> dict:
     payload = await request.body()
     billing = BillingService(db=db)
@@ -242,7 +265,9 @@ async def stripe_webhook(
 
 
 @router.get("/billing/portal", summary="Get Stripe customer portal URL")
-async def get_portal_url(auth: CurrentAuth, db: DB) -> dict:
+async def get_portal_url(
+    auth: CurrentAuth, db: DB,
+) -> dict:
     if not auth.subscription or not auth.subscription.stripe_customer_id:
         raise HTTPException(
             status_code=400,

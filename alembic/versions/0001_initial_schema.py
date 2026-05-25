@@ -28,6 +28,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("name", sa.String(120), nullable=False),
         sa.Column("slug", sa.String(80), nullable=False),
+        sa.Column("owner_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("instagram_account_id", sa.String(64), nullable=True),
         sa.Column("instagram_username", sa.String(64), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),

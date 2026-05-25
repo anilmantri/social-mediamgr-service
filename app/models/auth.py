@@ -111,14 +111,8 @@ class User(Base):
     sessions: Mapped[list["UserSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
-    @property
-    def active_subscription(self) -> "Subscription | None":
-        active = [s for s in self.subscriptions if s.status in (
-            SubscriptionStatus.ACTIVE,
-            SubscriptionStatus.TRIALING,
-            SubscriptionStatus.FREEMIUM,
-        )]
-        return active[0] if active else None
+    # Use BillingService._get_active_subscription(user_id) instead of this property
+    # Direct relationship access causes MissingGreenlet error in async SQLAlchemy
 
 
 class UserSession(Base):
@@ -206,7 +200,7 @@ class Subscription(Base):
     # Grace period on failed payment
     grace_period_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    metadata: Mapped[dict] = mapped_column(JSONB, default=dict)
+    sub_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
 
     user: Mapped["User"]  = relationship(back_populates="subscriptions")
     plan: Mapped["Plan"]  = relationship(back_populates="subscriptions")
