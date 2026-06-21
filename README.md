@@ -7,10 +7,6 @@ Backend API for the Social Media Manager platform.
 
 ## Run locally
 
-## To run the docker-compose.infra.yaml 
-podman machine start
-podman compose -f docker-compose.infra.yml up -d
-
 **Requirements:** Python 3.12+, PostgreSQL, Redis
 
 ### Step 1 — Clone and enter the project
@@ -50,7 +46,6 @@ alembic upgrade head
 
 ### Step 6 — Start the API
 ```bash
-
 python main.py
 ```
 

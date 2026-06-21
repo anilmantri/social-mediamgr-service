@@ -1,0 +1,176 @@
+version: "3.9"
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: smm_svc_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: social_mediamgr
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d social_mediamgr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: smm_svc_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── FastAPI App ───────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: smm_svc_api
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app          # hot-reload in dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Celery Worker — publisher queue (posts to Instagram) ─────────────────────
+  worker_publisher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: smm_svc_worker_pub
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A app.workers.tasks.celery_app worker
+      --loglevel=info
+      --queues=publisher
+      --concurrency=2
+      --hostname=worker_publisher@%h
+
+  # ── Celery Worker — generation queue ─────────────────────────────────────────
+  worker_generation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: smm_svc_worker_gen
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A app.workers.tasks.celery_app worker
+      --loglevel=info
+      --queues=generation
+      --concurrency=4
+      --hostname=worker_generation@%h
+
+  # ── Celery Worker — calendar queue ───────────────────────────────────────────
+  worker_calendar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: smm_svc_worker_cal
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A app.workers.tasks.celery_app worker
+      --loglevel=info
+      --queues=calendar
+      --concurrency=2
+      --hostname=worker_calendar@%h
+
+  # ── Celery Beat — for future scheduled tasks ──────────────────────────────────
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: smm_svc_beat
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A app.workers.tasks.celery_app beat --loglevel=info
+
+  # ── Flower — Celery monitoring UI ────────────────────────────────────────────
+  flower:
+    image: mher/flower:2.0
+    container_name: smm_svc_flower
+    restart: unless-stopped
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      FLOWER_PORT: 5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+
+  # ── Mailhog — local SMTP for email notifications ──────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: smm_svc_mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: social_mediamgr_network
