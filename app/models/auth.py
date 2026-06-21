@@ -91,7 +91,7 @@ class User(Base):
     # Auth
     hashed_password: Mapped[str | None] = mapped_column(Text)  # null for Google-only users
     auth_provider: Mapped[AuthProvider] = mapped_column(
-        Enum(AuthProvider), default=AuthProvider.EMAIL
+        Enum(AuthProvider, values_callable=lambda x: [e.value for e in x]), default=AuthProvider.EMAIL
     )
     google_id: Mapped[str | None] = mapped_column(String(128), unique=True, index=True)
 
@@ -138,7 +138,7 @@ class Plan(Base):
 
     __tablename__ = "plans"
 
-    tier: Mapped[PlanTier] = mapped_column(Enum(PlanTier), nullable=False, unique=True)
+    tier: Mapped[PlanTier] = mapped_column(Enum(PlanTier, values_callable=lambda x: [e.value for e in x]), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
 
@@ -180,10 +180,10 @@ class Subscription(Base):
     )
 
     status: Mapped[SubscriptionStatus] = mapped_column(
-        Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.FREEMIUM, index=True
+        Enum(SubscriptionStatus, values_callable=lambda x: [e.value for e in x]), nullable=False, default=SubscriptionStatus.FREEMIUM, index=True
     )
     billing_interval: Mapped[BillingInterval] = mapped_column(
-        Enum(BillingInterval), default=BillingInterval.MONTHLY
+        Enum(BillingInterval, values_callable=lambda x: [e.value for e in x]), default=BillingInterval.MONTHLY
     )
 
     # Dates
@@ -257,7 +257,7 @@ class CreditTransaction(Base):
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     user_id: Mapped[uuid.UUID | None]  = mapped_column(UUID(as_uuid=True))
 
-    action_type: Mapped[CreditActionType] = mapped_column(Enum(CreditActionType), nullable=False)
+    action_type: Mapped[CreditActionType] = mapped_column(Enum(CreditActionType, values_callable=lambda x: [e.value for e in x]), nullable=False)
     credits_delta: Mapped[int] = mapped_column(Integer, nullable=False)  # negative = deduction
     balance_after: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[str | None] = mapped_column(String(512))

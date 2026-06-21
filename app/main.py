@@ -13,6 +13,11 @@ from fastapi.responses import JSONResponse
 from app.api.v1.endpoints.content import router as content_router
 from app.api.v1.endpoints.scheduler import router as scheduler_router
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.workspaces import router as workspace_router
+from app.api.v1.endpoints.dashboard import router as dashboard_router
+from app.api.v1.endpoints.analyzer import router as analyzer_router
+from app.api.v1.endpoints.onboarding import router as onboarding_router
+from app.api.v1.endpoints.admin import router as admin_router
 from app.core.config import settings
 from app.db.session import check_db_connection
 
@@ -85,10 +90,23 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
-        description="social-mediamgr-service — AI Content Engine API",
-        docs_url="/docs" if not settings.is_production else None,
-        redoc_url="/redoc" if not settings.is_production else None,
+        description="Social Media Manager — AI-powered Instagram content platform",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
         lifespan=lifespan,
+        openapi_tags=[
+            {"name": "Auth & Billing",      "description": "Signup, login, Google OAuth, plans, subscriptions, credits"},
+            {"name": "Credits",             "description": "Real-time credit balance and affordability checks"},
+            {"name": "Workspaces",          "description": "Workspace CRUD, team members, ownership transfer"},
+            {"name": "Content Engine",      "description": "AI generation, approval workflow, brand voice"},
+            {"name": "Calendar & Scheduler","description": "Instagram OAuth, scheduling, calendar, optimal time"},
+            {"name": "Dashboard",           "description": "Overview dashboard — pipeline, engagement, health score"},
+            {"name": "Analyzer",            "description": "Deep analytics — top posts, hashtags, heatmap, AI suggestions"},
+            {"name": "Onboarding",          "description": "Onboarding checklist and email sequences"},
+            {"name": "Admin",               "description": "Internal admin — users, revenue metrics, system health"},
+            {"name": "Health",              "description": "Service health check"},
+        ],
     )
 
     # ── Middleware ─────────────────────────────────────────────────────────────

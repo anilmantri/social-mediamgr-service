@@ -103,9 +103,6 @@ class PostPublisherService:
                     )
                 )
                 total = count_q.scalar_one()
-                ws_q = await self._db.execute(
-                    select("workspaces").where(1 == 1)
-                )
                 # Get owner_id via workspace
                 from app.models.content import Workspace
                 ws_result = await self._db.execute(

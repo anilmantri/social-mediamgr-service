@@ -23,6 +23,13 @@ class CacheClient:
             decode_responses=True,
         )
 
+    async def ping(self) -> bool:
+        try:
+            await self._redis.ping()
+            return True
+        except Exception:
+            return False
+
     async def get(self, key: str) -> Any | None:
         try:
             raw = await self._redis.get(key)

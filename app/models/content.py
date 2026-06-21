@@ -121,7 +121,7 @@ class WorkspaceMember(Base):
         UUID(as_uuid=True), nullable=False, index=True
     )
     role: Mapped[WorkspaceRole] = mapped_column(
-        Enum(WorkspaceRole), default=WorkspaceRole.CREATOR
+        Enum(WorkspaceRole, values_callable=lambda x: [e.value for e in x]), default=WorkspaceRole.CREATOR
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -150,7 +150,7 @@ class BrandProfile(Base):
 
     # Voice configuration
     default_tone: Mapped[ToneType] = mapped_column(
-        Enum(ToneType), default=ToneType.PROFESSIONAL
+        Enum(ToneType, values_callable=lambda x: [e.value for e in x]), default=ToneType.PROFESSIONAL
     )
     tone_description: Mapped[str | None] = mapped_column(Text)
     topic_blocklist: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
@@ -188,10 +188,10 @@ class DraftContent(Base):
     assigned_reviewer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
     content_type: Mapped[ContentType] = mapped_column(
-        Enum(ContentType), default=ContentType.FEED_IMAGE
+        Enum(ContentType, values_callable=lambda x: [e.value for e in x]), default=ContentType.FEED_IMAGE
     )
     status: Mapped[ContentStatus] = mapped_column(
-        Enum(ContentStatus), default=ContentStatus.DRAFT, index=True
+        Enum(ContentStatus, values_callable=lambda x: [e.value for e in x]), default=ContentStatus.DRAFT, index=True
     )
 
     # Active version pointer (denormalised for fast reads)
@@ -247,7 +247,7 @@ class ContentVersion(Base):
     image_prompt: Mapped[str | None] = mapped_column(Text)       # original AI prompt
     image_alt_text: Mapped[str | None] = mapped_column(String(256))
     cta: Mapped[str | None] = mapped_column(String(256))         # call-to-action
-    tone: Mapped[ToneType | None] = mapped_column(Enum(ToneType))
+    tone: Mapped[ToneType | None] = mapped_column(Enum(ToneType, values_callable=lambda x: [e.value for e in x]))
 
     # Metadata
     ai_model_used: Mapped[str | None] = mapped_column(String(80))
@@ -274,7 +274,7 @@ class ApprovalAction(Base):
     )
     actor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     action: Mapped[ApprovalActionType] = mapped_column(
-        Enum(ApprovalActionType), nullable=False
+        Enum(ApprovalActionType, values_callable=lambda x: [e.value for e in x]), nullable=False
     )
     comment: Mapped[str | None] = mapped_column(Text)
     version_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
@@ -301,7 +301,7 @@ class GenerationJob(Base):
 
     job_type: Mapped[str] = mapped_column(String(64), nullable=False)  # "caption", "image", "calendar"
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus), default=JobStatus.QUEUED, index=True
+        Enum(JobStatus, values_callable=lambda x: [e.value for e in x]), default=JobStatus.QUEUED, index=True
     )
     celery_task_id: Mapped[str | None] = mapped_column(String(255), unique=True)
 

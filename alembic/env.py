@@ -16,8 +16,8 @@ from app.db.session import Base
 import app.models  # noqa: F401 — registers all models on Base.metadata
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
 
+# Offline mode uses sync driver (psycopg2), online mode uses async driver (asyncpg)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -27,7 +27,8 @@ target_metadata = Base.metadata
 # ── Offline mode ───────────────────────────────────────────────────────────────
 def run_migrations_offline() -> None:
     """Generate SQL script without DB connection."""
-    url = config.get_main_option("sqlalchemy.url")
+    # Offline mode needs sync URL
+    url = settings.database_url_sync
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -53,8 +54,12 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
+    # Online mode uses async URL (postgresql+asyncpg://)
+    configuration = config.get_section(config.config_ini_section, {})
+    configuration["sqlalchemy.url"] = str(settings.DATABASE_URL)
+
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

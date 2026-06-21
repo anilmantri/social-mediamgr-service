@@ -17,6 +17,7 @@ from app.core.config import settings
 # Import scheduler_tasks and credit_tasks so Celery registers beat schedule
 import app.workers.scheduler_tasks  # noqa: F401
 import app.workers.credit_tasks      # noqa: F401
+import app.workers.onboarding_tasks  # noqa: F401
 
 log = structlog.get_logger(__name__)
 task_log = get_task_logger(__name__)

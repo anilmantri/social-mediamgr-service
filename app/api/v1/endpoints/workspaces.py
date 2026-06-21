@@ -88,7 +88,7 @@ class TransferOwnershipRequest(BaseModel):
 
 # ── Workspace CRUD ────────────────────────────────────────────────────────────
 
-@router.get("", response_model=list[WorkspaceRead])
+@router.get("", response_model=list[WorkspaceRead], summary="List all workspaces for current user")
 async def list_workspaces(
     auth: CurrentAuth,
     db: DB,
@@ -140,7 +140,7 @@ async def list_workspaces(
     return result
 
 
-@router.post("", response_model=WorkspaceRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=WorkspaceRead, status_code=status.HTTP_201_CREATED, summary="Create a new workspace")
 async def create_workspace(
     body: WorkspaceCreate,
     auth: CurrentAuth,
@@ -219,7 +219,7 @@ async def create_workspace(
     )
 
 
-@router.get("/{workspace_id}", response_model=WorkspaceRead)
+@router.get("/{workspace_id}", response_model=WorkspaceRead, summary="Get workspace detail")
 async def get_workspace(
     ws: WorkspaceAny,
 ) -> WorkspaceRead:
@@ -231,7 +231,7 @@ async def get_workspace(
     )
 
 
-@router.patch("/{workspace_id}", response_model=WorkspaceRead)
+@router.patch("/{workspace_id}", response_model=WorkspaceRead, summary="Update workspace name or Instagram username")
 async def update_workspace(
     body: WorkspaceUpdate,
     ws: WorkspaceAdmin,
@@ -250,7 +250,7 @@ async def update_workspace(
     )
 
 
-@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Soft delete workspace")
 async def delete_workspace(
     ws: WorkspaceOwner,
     db: DB,
@@ -263,7 +263,7 @@ async def delete_workspace(
 
 # ── Team members ──────────────────────────────────────────────────────────────
 
-@router.get("/{workspace_id}/members", response_model=list[MemberRead])
+@router.get("/{workspace_id}/members", response_model=list[MemberRead], summary="List workspace members")
 async def list_members(
     ws: WorkspaceAny,
     db: DB,
@@ -281,7 +281,7 @@ async def list_members(
     ]
 
 
-@router.post("/{workspace_id}/members", status_code=status.HTTP_201_CREATED)
+@router.post("/{workspace_id}/members", status_code=status.HTTP_201_CREATED, summary="Invite a member by email")
 async def invite_member(
     body: InviteMemberRequest,
     ws: WorkspaceAdmin,
@@ -343,7 +343,7 @@ async def invite_member(
     return {"message": f"{target_user.name} added as {body.role.value}"}
 
 
-@router.patch("/{workspace_id}/members/{user_id}", response_model=MemberRead)
+@router.patch("/{workspace_id}/members/{user_id}", response_model=MemberRead, summary="Update member role")
 async def update_member_role(
     user_id: uuid.UUID,
     body: UpdateRoleRequest,
@@ -366,7 +366,7 @@ async def update_member_role(
     return MemberRead(user_id=member.user_id, role=member.role)
 
 
-@router.delete("/{workspace_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{workspace_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Remove a member")
 async def remove_member(
     user_id: uuid.UUID,
     ws: WorkspaceAdmin,
@@ -388,7 +388,7 @@ async def remove_member(
     await db.flush()
 
 
-@router.post("/{workspace_id}/transfer", status_code=status.HTTP_200_OK)
+@router.post("/{workspace_id}/transfer", status_code=status.HTTP_200_OK, summary="Transfer workspace ownership")
 async def transfer_ownership(
     body: TransferOwnershipRequest,
     ws: WorkspaceOwner,
@@ -433,7 +433,7 @@ async def transfer_ownership(
     return {"message": "Ownership transferred successfully."}
 
 
-@router.get("/{workspace_id}/usage")
+@router.get("/{workspace_id}/usage", summary="Get workspace credit usage and plan limits")
 async def get_workspace_usage(
     ws: WorkspaceAny,
     auth: CurrentAuth,

@@ -321,8 +321,8 @@ class AnalyzerService:
         based on the workspace's actual performance data.
         """
         try:
-            from app.services.groq_client import GroqClient
-            client = GroqClient()
+            from app.services.groq_client import get_groq_client
+            client = get_groq_client()
 
             top_hashtags = [h["hashtag"] for h in hashtag_analysis[:5]]
             poor_hashtags = [h["hashtag"] for h in hashtag_analysis if h["performance"] == "poor"][:3]
@@ -347,12 +347,21 @@ Example format:
 [{{"title": "Post more carousels", "description": "Your carousels get 2x more saves than single images. Aim for 3 carousels per week.", "impact": "high", "category": "content"}}]"""
 
             import json
-            raw = await client.complete(
-                prompt=prompt,
-                system="You are a social media analytics expert. Respond only with valid JSON.",
+            # Use Groq API directly for a simple completion
+            import groq as _groq
+            from app.core.config import settings as _cfg
+            _groq_client = _groq.AsyncGroq(api_key=_cfg.GROQ_API_KEY)
+            _response = await _groq_client.chat.completions.create(
+                model=_cfg.GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": "You are a social media analytics expert. Respond only with valid JSON."},
+                    {"role": "user",   "content": prompt},
+                ],
                 temperature=0.4,
                 max_tokens=600,
+                response_format={"type": "json_object"},
             )
+            raw = (_response.choices[0].message.content or "").strip()
             raw = raw.strip()
             if raw.startswith("```"):
                 raw = raw.split("```")[1]

@@ -128,7 +128,7 @@ class ScheduledPost(Base):
     # Scheduling
     scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     publish_status: Mapped[PublishStatus] = mapped_column(
-        Enum(PublishStatus), default=PublishStatus.SCHEDULED, index=True
+        Enum(PublishStatus, values_callable=lambda x: [e.value for e in x]), default=PublishStatus.SCHEDULED, index=True
     )
 
     # AI-suggested vs manually set time
@@ -184,7 +184,7 @@ class PostPublishLog(Base):
     ig_media_id: Mapped[str | None] = mapped_column(String(64))
 
     # Error details
-    error_code: Mapped[PublishErrorCode | None] = mapped_column(Enum(PublishErrorCode))
+    error_code: Mapped[PublishErrorCode | None] = mapped_column(Enum(PublishErrorCode, values_callable=lambda x: [e.value for e in x]))
     error_message: Mapped[str | None] = mapped_column(Text)
     duration_ms: Mapped[int | None] = mapped_column(Integer)
 
