@@ -49,11 +49,12 @@ USER appuser
 EXPOSE 8000
 
 # Gunicorn with uvicorn workers for production
-CMD ["gunicorn", "app.main:app", \
-     "--worker-class", "uvicorn.workers.UvicornWorker", \
-     "--workers", "4", \
-     "--bind", "0.0.0.0:8000", \
-     "--timeout", "120", \
-     "--keep-alive", "5", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-"]
+# Shell form so $PORT (set by Render/Heroku at runtime) is expanded correctly
+CMD gunicorn app.main:app \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --workers 2 \
+    --bind 0.0.0.0:${PORT:-8000} \
+    --timeout 120 \
+    --keep-alive 5 \
+    --access-logfile - \
+    --error-logfile -
