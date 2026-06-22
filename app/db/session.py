@@ -11,13 +11,29 @@ from app.core.config import settings
 
 
 # ── Engine ─────────────────────────────────────────────────────────────────────
+# Supabase uses PgBouncer in Transaction mode which is incompatible with
+# asyncpg's prepared statements. Disabling them fixes
+# DuplicatePreparedStatementError on every request.
+_connect_args: dict = {}
+_db_url = str(settings.DATABASE_URL)
+
+if (
+    settings.DB_DISABLE_PREPARED_STATEMENTS
+    or "supabase" in _db_url
+    or "pooler" in _db_url
+    or "pgbouncer" in _db_url.lower()
+):
+    # Disable prepared statements for PgBouncer / Supabase pooler
+    _connect_args = {"statement_cache_size": 0, "prepared_statement_cache_size": 0}
+
 engine = create_async_engine(
-    str(settings.DATABASE_URL),
+    _db_url,
     pool_size=settings.DB_POOL_SIZE,
     max_overflow=settings.DB_MAX_OVERFLOW,
     pool_timeout=settings.DB_POOL_TIMEOUT,
-    pool_pre_ping=True,  # detects stale connections
+    pool_pre_ping=True,
     echo=settings.DB_ECHO,
+    connect_args=_connect_args,
 )
 
 AsyncSessionFactory = async_sessionmaker(

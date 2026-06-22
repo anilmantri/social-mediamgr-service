@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = 20
     DB_POOL_TIMEOUT: int = 30
     DB_ECHO: bool = False
+    # Set True when using Supabase / PgBouncer in transaction mode
+    # Prevents DuplicatePreparedStatementError with asyncpg
+    DB_DISABLE_PREPARED_STATEMENTS: bool = False
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     REDIS_URL: RedisDsn = Field(default="redis://localhost:6379/0")
