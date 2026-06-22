@@ -4,6 +4,7 @@ stripe==11.3.0
 # Web framework
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
+gunicorn==23.0.0
 python-multipart==0.0.9
 
 # Database
