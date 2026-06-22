@@ -13,6 +13,11 @@ from fastapi.responses import JSONResponse
 from app.api.v1.endpoints.content import router as content_router
 from app.api.v1.endpoints.scheduler import router as scheduler_router
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.workspaces import router as workspace_router
+from app.api.v1.endpoints.dashboard import router as dashboard_router
+from app.api.v1.endpoints.analyzer import router as analyzer_router
+from app.api.v1.endpoints.onboarding import router as onboarding_router
+from app.api.v1.endpoints.admin import router as admin_router
 from app.core.config import settings
 from app.db.session import check_db_connection
 
